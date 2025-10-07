@@ -1,5 +1,25 @@
 console.log("Email Writer!");
 
+function getEmailContent(){
+    const selectors = [
+        '.h7', //For Gmailsubject 
+        'a3s.aiL', // For Gmail body
+        '.gmail_quote', // For Gmail Quoted Content
+        '[role="presentation"]'
+    ];
+
+    for(const selector of selectors){
+        const Content = document.querySelector(selector);
+        if(Content){
+            return Content.innerText.trim();
+        }
+        return '';
+    }
+    
+    
+
+}
+
 function  findComposeToolbar(){
     const selectors = ['.btC', '.aDh', '[role="toolbar"]', '.gU.Up'];
     for(const selector of selectors){
@@ -8,9 +28,10 @@ function  findComposeToolbar(){
             console.log('Selector matched: ' + selector);
             return toolbar;
         }
-        
+        return null;
     }
-    return null;
+    
+    
 }
 
 //Createing Button
@@ -39,7 +60,45 @@ function injectButton(){
     }
     console.log("Toolbar found");
     const button = createAIButton();
-    button.classList.add('.ai-reply-button');
+    button.classList.add('ai-reply-button');
+
+    button.addEventListener('click',async () => {
+        try {
+            button.innerHTML = 'Generateing....';
+            button.disabled = true;
+            const emailContent = getEmailContent();
+                //Calling API
+            const response = await fetch('http://localhost:8080/api/email/generate',{
+                method:'POST',
+                headers:{
+                    'Content-Type' : 'application/json',
+                },
+                body: JSON.stringify({
+                    emailContent: emailContent,
+                    tone: "professional"
+                })
+            });
+            if(!response.ok){
+                throw new Error("API Request Failed");
+            }
+            const generatedReply = await response.text();
+
+            const composeBox = document.querySelector(
+                '[role="textbox"][g_editable="true"]'
+            );
+            if(composeBox){
+                composeBox.focus();
+                document.execCommand('insertText',false,generatedReply);  //Simulating Paste Action
+            }
+        } catch (error) {
+            console.error("Error generating reply:", error);
+             button.innerHTML = 'Error';
+        }
+        finally{
+            button.innerHTML = 'AI Reply';
+            button.disabled = false;    
+        }
+    });
 
     toolbar.insertBefore(button,toolbar.firstChild);
 }
